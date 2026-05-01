@@ -18,6 +18,11 @@ load_dotenv(env_path)
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
+# 禁用系统代理，避免代理连接问题
+proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+for var in proxy_vars:
+    os.environ.pop(var, None)
+
 API_BASE_URL = os.getenv("API_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 API_KEY = os.getenv("API_KEY", "")
 
@@ -88,7 +93,7 @@ async def test_tps(num_requests: int = 5, concurrency: int = 2):
 
     results: List[dict] = []
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(proxy=None) as client:
         semaphore = asyncio.Semaphore(concurrency)
 
         async def limited_request(idx):
