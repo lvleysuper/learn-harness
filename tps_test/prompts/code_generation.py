@@ -23,9 +23,17 @@ class CodeGenerationPrompt:
     
     @staticmethod
     def _python_prompt(problem: Problem) -> str:
-        return f"""Complete the following Python function. Only output the function implementation, no explanations.
+        return f"""Write the complete Python function implementation for the following problem.
 
-{problem.prompt}"""
+Requirements:
+1. Output ONLY Python code (no markdown ``` blocks, no explanations)
+2. Include necessary imports if needed
+3. Write the complete function with proper indentation
+4. Make sure the code passes the given doctests
+
+{problem.prompt}
+
+Complete function code (no markdown, no text outside code):"""
     
     @staticmethod
     def _cpp_prompt(problem: Problem) -> str:

@@ -32,13 +32,13 @@ async def run_single_test(
     debug: bool = False
 ) -> TestResult:
     prompt = CodeGenerationPrompt.create_prompt(problem, config.benchmark.language.value)
-    
+
     response = await client.generate(
         prompt=prompt,
         max_tokens=config.api.max_tokens,
         temperature=config.api.temperature
     )
-    
+
     if not response.success:
         return TestResult(
             problem_id=problem.problem_id,
@@ -48,25 +48,43 @@ async def run_single_test(
             tps=0,
             error=response.error or "Unknown error"
         )
-    
+
+    # 清理生成的代码：移除 markdown 格式
+    generated_code = response.content.strip()
+
+    # 移除 markdown 代码块标记
+    if generated_code.startswith('```'):
+        lines = generated_code.split('\n')
+        # 移除开头的 ```python 或 ```
+        if lines[0].strip().startswith('```'):
+            lines = lines[1:]
+        # 移除结尾的 ```
+        while lines and lines[-1].strip() == '```':
+            lines = lines[:-1]
+        generated_code = '\n'.join(lines).strip()
+
+    # 模型输出完整函数，直接使用
+    full_func_code = generated_code
+
     if debug:
         print(f"\n=== {problem.problem_id} 生成的代码 ===")
-        print(response.content[:500])
+        print(full_func_code[:800])
         print("=" * 50)
-    
+
     test_code = None
     passed_tests = False
     execution_error = None
-    
+
     if problem.test_cases:
         test_code = problem.test_cases[0]
-        full_code = f"{response.content}\n{test_code}"
+        # 正确拼接：函数代码 + 测试代码 + 调用 check
+        full_code = f"{full_func_code}\n{test_code}\ncheck({problem.entry_point})"
         try:
             exec_result = executor.execute(full_code, "python", timeout=10)
             passed_tests = exec_result.success
             if not exec_result.success and debug:
                 execution_error = exec_result.error
-                print(f"执行错误: {exec_result.error[:300]}")
+                print(f"执行错误: {exec_result.error[:500]}")
         except Exception as e:
             passed_tests = False
             if debug:
